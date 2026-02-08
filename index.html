@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图像变换工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/gl-matrix@3.4.3/gl-matrix-min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#007AFF',
+            secondary: '#34C759',
+            danger: '#FF3B30',
+            accent: '#AF52DE'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 苹果风格的控制点样式 */
+    .point-draggable {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #FF3B30, #FF9500);
+      border: 2px solid rgba(255,255,255,0.9);
+      cursor: move;
+      z-index: 10;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 13px;
+      user-select: none;
+      pointer-events: auto;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .point-draggable:hover {
+      transform: translate(-50%, -50%) scale(1.15);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+    
+    .point-draggable:active {
+      transform: translate(-50%, -50%) scale(1.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    /* 控制点容器 */
+    #pointsContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    
+    /* Canvas容器 */
+    .canvas-container {
+      position: relative;
+      display: inline-block;
+    }
+    
+    #pointsContainer .point-draggable {
+      pointer-events: auto;
+    }
+    
+    /* 苹果风格按钮 */
+    .apple-button {
+      background: linear-gradient(180deg, #007AFF 0%, #0056CC 100%);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-weight: 600;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+    }
+    
+    .apple-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,122,255,0.4);
+    }
+    
+    .apple-button:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 4px rgba(0,122,255,0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <div class="max-w-6xl mx-auto px-4 py-8">
+    <header class="text-center mb-12">
+      <h1 class="text-4xl font-bold text-gray-900 mb-3">图像透视变换</h1>
+      <p class="text-gray-600 text-lg max-w-2xl mx-auto">通过拖动四个控制点来实时调整图像的透视效果</p>
+    </header>
+    
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- 图像对比区域 -->
+      <div class="lg:col-span-2 space-y-8">
+        <!-- 原始图像 -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-xl font-semibold text-gray-900 mb-4">原始图像</h3>
+          <div class="flex justify-center">
+            <div class="canvas-container">
+              <canvas id="sourceCanvas" width="500" height="400" class="rounded-xl bg-gray-50 cursor-pointer max-w-full border border-gray-200"></canvas>
+              <div id="pointsContainer"></div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 变换后图像 -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-xl font-semibold text-gray-900 mb-4">变换结果</h3>
+          <div class="flex justify-center">
+            <canvas id="outputCanvas" width="500" height="400" class="rounded-xl bg-gray-50 max-w-full border border-gray-200"></canvas>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 控制面板 -->
+      <div class="space-y-8">
+        <!-- 坐标控制 -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-xl font-semibold text-gray-900 mb-4">控制点坐标</h3>
+          <div class="mb-6" id="coordControls">
+            <!-- 坐标输入控件将通过JS动态生成 -->
+          </div>
+          <div class="space-y-3">
+            <button id="applyTransform" class="w-full px-4 py-3 apple-button flex items-center justify-center gap-2">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+              </svg>
+              <span>应用变换</span>
+            </button>
+            <div class="flex gap-3">
+              <button id="loadExample" class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+                示例
+              </button>
+              <button id="resetPoints" class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors">
+                重置
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 使用说明 -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 class="text-xl font-semibold text-gray-900 mb-4">操作指南</h3>
+          <div class="space-y-4 text-sm text-gray-600">
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5">1</div>
+              <div>
+                <strong class="text-gray-900">拖动控制点</strong>
+                <p>点击并拖动图像上的橙色控制点调整位置</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5">2</div>
+              <div>
+                <strong class="text-gray-900">实时预览</strong>
+                <p>变换效果会实时显示在右侧画布中</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <div class="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-semibold mt-0.5">3</div>
+              <div>
+                <strong class="text-gray-900">精确调整</strong>
+                <p>使用坐标输入框进行精确的位置调整</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <footer class="mt-12 text-center text-gray-500 text-sm py-6">
+    <p>图像透视变换工具 &copy; 2024</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
