@@ -1,6 +1,6 @@
-# 图像透视变换工具 (Image Perspective Transform)
+# 图像透视变换示例 (Image Perspective Transform)
 
-一个基于Web的交互式图像透视变换工具，允许用户通过拖动控制点实时调整图像的透视效果。
+一个基于Web的交互式图像透视变换示例，允许用户通过拖动控制点实时调整图像的透视效果。
 
 ![Demo](https://img.shields.io/badge/Status-Active-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue) ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
 

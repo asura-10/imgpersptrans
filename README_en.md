@@ -1,6 +1,6 @@
-# Image Perspective Transform Tool
+# Image Perspective Transform Example
 
-A web-based interactive image perspective transformation tool that allows users to adjust image perspective effects in real-time by dragging control points.
+A web-based interactive image perspective transformation example that allows users to adjust image perspective effects in real-time by dragging control points.
 
 ![Demo](https://img.shields.io/badge/Status-Active-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue) ![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow)
 
